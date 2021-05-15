@@ -7,13 +7,13 @@ import java.net.Socket;
 public class TCPServer extends Thread {
     private GalagaGameStatus galagaGameStatus;
     private ServerSocket serverSocket;
-    private int PORT = 4444;
+    //private int PORT = 4444;
     public int numberClients = 0;
     public TCPServerThread[] clients = new TCPServerThread[5]; // Max. number of players 4
     public int maxNumberClients = 4;
     private OnMessageReceived messageListener;
 
-    public TCPServer(GalagaGameStatus galagaGameStatus, OnMessageReceived messageListener) throws IOException {
+    public TCPServer(int PORT, GalagaGameStatus galagaGameStatus, OnMessageReceived messageListener) throws IOException {
         this.galagaGameStatus = galagaGameStatus;
         this.messageListener = messageListener;
         this.serverSocket = new ServerSocket(PORT);

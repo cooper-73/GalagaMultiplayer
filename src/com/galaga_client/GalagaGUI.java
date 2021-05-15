@@ -1,6 +1,7 @@
 package com.galaga_client;
 
 import com.galaga_game.Galaga;
+import com.galaga_server.GalagaServer;
 
 import javax.swing.*;
 import javax.swing.text.SimpleAttributeSet;
@@ -63,13 +64,15 @@ public class GalagaGUI extends JFrame {
         createServerButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                /*try {
-                    new Thread(new GalagaServer()).start();
-                    Thread.sleep(50);
+                String IP = ipAddresTextField.getText();
+                int PORT = Integer.parseInt(portTextField.getText());
+                try {
+                    new Thread(new GalagaServer(PORT)).start();
+                    Thread.sleep(50);   //Delay entre crear el servidor y conectarse a el
+                    galaga.startClient(IP, PORT);
                 } catch (InterruptedException interruptedException) {
                     interruptedException.printStackTrace();
-                }*/
-                galaga.startClient();
+                }
                 waitRoomMaster();
             }
         });
@@ -77,9 +80,10 @@ public class GalagaGUI extends JFrame {
         joinGameButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                //Falta leer de los text field
-                galaga.startClient();
+                String IP = ipAddresTextField.getText();
+                int PORT = Integer.parseInt(portTextField.getText());
                 try {
+                    galaga.startClient(IP, PORT);
                     Thread.sleep(20);
                 } catch (InterruptedException interruptedException) {
                     interruptedException.printStackTrace();
@@ -139,7 +143,7 @@ public class GalagaGUI extends JFrame {
     public void setBoardPanel() {
         boardPanel.setLayout(new BoxLayout(boardPanel, BoxLayout.Y_AXIS));
         //Set Board Styles
-        Font font = new Font("Noto Mono", Font.BOLD, 24);
+        Font font = new Font(Font.MONOSPACED, Font.BOLD, 24);
         boardTextPane.setFont(font);
         boardTextPane.setForeground(Color.GREEN);
         boardTextPane.setBackground(Color.BLACK);
@@ -155,21 +159,22 @@ public class GalagaGUI extends JFrame {
         StyleConstants.setAlignment(centerMessage, StyleConstants.ALIGN_CENTER);
         docMessage.setParagraphAttributes(0, docMessage.getLength(), centerMessage, false);
 
-        boardTextPane.setText("-----------------------------------------\n" +
-                "-----------------------------------------\n" +
-                "-----------------------------------------\n" +
-                "-----------------------------------------\n" +
-                "-----------------------------------------\n" +
-                "-----------------------------------------\n" +
-                "-----------------------------------------\n" +
-                "-----------------------------------------\n" +
-                "-----------------------------------------\n" +
-                "-----------------------------------------\n" +
-                "-----------------------------------------\n");
+        boardTextPane.setText("                    $$\\                               \n" +
+                "                    $$ |                              \n" +
+                " $$$$$$\\   $$$$$$\\  $$ | $$$$$$\\   $$$$$$\\   $$$$$$\\  \n" +
+                "$$  __$$\\  \\____$$\\ $$ | \\____$$\\ $$  __$$\\  \\____$$\\ \n" +
+                "$$ /  $$ | $$$$$$$ |$$ | $$$$$$$ |$$ /  $$ | $$$$$$$ |\n" +
+                "$$ |  $$ |$$  __$$ |$$ |$$  __$$ |$$ |  $$ |$$  __$$ |\n" +
+                "\\$$$$$$$ |\\$$$$$$$ |$$ |\\$$$$$$$ |\\$$$$$$$ |\\$$$$$$$ |\n" +
+                " \\____$$ | \\_______|\\__| \\_______| \\____$$ | \\_______|\n" +
+                "$$\\   $$ |                        $$\\   $$ |          \n" +
+                "\\$$$$$$  |                        \\$$$$$$  |          \n" +
+                " \\______/                          \\______/           \n");
+
         boardTextPane.setEditable(false);
-        messageTextPane.setText("-----------------------------------------\n" +
-                "-----------------------------------------\n" +
-                "-----------------------------------------\n");
+        messageTextPane.setText("============= Instructions ==============\n" +
+                "|   A - move left   |  K - pew pew pew  |\n" +
+                "|   D - move right  |  Q - quit game    |");
         messageTextPane.setEditable(false);
 
         boardPanel.add(boardTextPane);

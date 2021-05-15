@@ -8,17 +8,22 @@ import java.util.ArrayList;
 public class GalagaServer extends Thread {
     private TCPServer tcpServer;
     public GalagaGameStatus galagaGameStatus;
+    private int PORT;
 
     public static void main(String[] args) throws IOException {
-        GalagaServer server = new GalagaServer();
+        GalagaServer server = new GalagaServer(4444);
         server.start();
+    }
+
+    public GalagaServer(int PORT) {
+        this.PORT = PORT;
     }
 
     @Override
     public void run() {
         galagaGameStatus = new GalagaGameStatus();
         try {
-            tcpServer = new TCPServer(galagaGameStatus, new TCPServer.OnMessageReceived() {
+            tcpServer = new TCPServer(PORT, galagaGameStatus, new TCPServer.OnMessageReceived() {
                 @Override
                 public void messageReceived(String message) {
                     synchronized (this) {
@@ -97,7 +102,7 @@ class GalagaGameStatus {
             ships.get(i).moveShipTo(newPos);
             newPos += (gap + 1);
         }
-        Ship newShip = new Ship(newPos, 1, this);
+        Ship newShip = new Ship(newPos, 1, this, ships);
         ships.add(newShip);
     }
 
@@ -107,12 +112,14 @@ class Ship {
     public int xPos;
     public int status;
     private GalagaGameStatus galagaGameStatus;
+    private ArrayList<Ship> ships;
 
     //Creates a ship
-    public Ship(int xPos, int status, GalagaGameStatus galagaGameStatus) {
+    public Ship(int xPos, int status, GalagaGameStatus galagaGameStatus, ArrayList<Ship>ships) {
         this.xPos = xPos;
         this.status = status;
         this.galagaGameStatus = galagaGameStatus;
+        this.ships = ships;
     }
 
     //Moves a ship to a fixed positions
@@ -125,13 +132,20 @@ class Ship {
         switch(keyCode){
             // Izquierda
             case 65:
-                if(this.xPos > 0)  this.xPos--;
+                if(xPos > 0 && checkNewPos(xPos - 1))  xPos--;
                 break;
             // Derecha
             case 68:
-                if(this.xPos < galagaGameStatus.width - 1) this.xPos++;
+                if(xPos < galagaGameStatus.width - 1 && checkNewPos(xPos + 1)) xPos++;
                 break;
         }
+    }
+
+    public boolean checkNewPos(int newPos) {
+        for(Ship ship : ships) {
+            if(ship != this && ship.xPos == newPos) return false;
+        }
+        return true;
     }
 
 }
@@ -145,13 +159,4 @@ class Ship {
 
     }
 }
-
-Comandos de envio
-
-add 1 Indica que el jugado 1 se ha añadido al juego
-player 1 Indica el nombre del jugador
-move 1 65 Indica hacia donde mover el jugador 1
-shot 1 Indica que el jugador 1 ha disparado
-died 1 Indica que el jugado 1 ha muerto
-
  */

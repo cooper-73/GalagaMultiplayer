@@ -6,15 +6,16 @@ import java.net.Socket;
 
 public class TCPClient extends Thread {
     public String IP;
-    public static final int PORT = 4444;
+    public int PORT;
     private OnMessageReceived mMessageListener = null;
     private boolean running = false;
     PrintWriter out;
     BufferedReader in;
 
-    public TCPClient(String ip, OnMessageReceived listener) {
-        IP = ip;
-        mMessageListener = listener;
+    public TCPClient(String ip, int PORT, OnMessageReceived listener) {
+        this.IP = ip;
+        this.mMessageListener = listener;
+        this.PORT = PORT;
     }
 
     public void sendMessage(String message) {
