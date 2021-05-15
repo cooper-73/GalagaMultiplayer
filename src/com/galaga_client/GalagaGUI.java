@@ -102,6 +102,7 @@ public class GalagaGUI extends JFrame {
         exitGameButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                galaga.tcpClient.stopClient();
                 setAllFocusable(true);
                 homeRoom();
             }
@@ -172,13 +173,10 @@ public class GalagaGUI extends JFrame {
                 " \\______/                          \\______/           \n");
 
         boardTextPane.setEditable(false);
-        messageTextPane.setText("============= Instructions ==============\n" +
-                "|   A - move left   |  K - pew pew pew  |\n" +
-                "|   D - move right  |  Q - quit game    |");
         messageTextPane.setEditable(false);
 
-        boardPanel.add(boardTextPane);
         boardPanel.add(messageTextPane);
+        boardPanel.add(boardTextPane);
     }
 
     public void setBoardText(String text) {
@@ -211,6 +209,9 @@ public class GalagaGUI extends JFrame {
         startPanel.add(closeServerButton);
         startPanel.repaint();
         startPanel.revalidate();
+        setMessageText("|   A - move left   |  K - pew pew pew  |\n" +
+                "|   D - move right  |  Q - quit game    |\n" +
+                "============= Instructions ==============");
     }
 
     public void waitRoomSlave() {
@@ -220,11 +221,17 @@ public class GalagaGUI extends JFrame {
         startPanel.add(exitGameButton);
         startPanel.repaint();
         startPanel.revalidate();
+        setMessageText("|   A - move left   |  K - pew pew pew  |\n" +
+                "|   D - move right  |  Q - quit game    |\n" +
+                "============= Instructions ==============");
         setAllFocusable(false);
         this.requestFocus();
     }
 
     public void startGame() {
+        startPanel.remove(startGameButton);
+        startPanel.repaint();
+        startPanel.revalidate();
         if(galaga.tcpClient != null)    galaga.tcpClient.sendMessage("start");
         setAllFocusable(false);
         this.requestFocus();
