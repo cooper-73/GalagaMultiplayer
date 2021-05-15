@@ -1,63 +1,43 @@
 package com.galaga_game;
 
 import com.galaga_client.GalagaGUI;
-import com.galaga_server.GalagaServer;
-import com.galaga_client.GalagaClient;
+import com.galaga_client.TCPClient;
 
 import java.util.*;
-import java.io.*;
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class Galaga extends Thread {
-	private GalagaGUI galagaGUI = null;
-	private GalagaServer server = null;
-	public GalagaClient client = null;
-	private String type;
+	public int id;
+	public char symbol;	//Id del palyer 1, 2, 3, ...
+	public GalagaGUI galagaGUI;
+	public TCPClient tcpClient;
+
 	Board newBoard;
 	Game newGame;
-	Laser newLaser;
-	public Ship newShip;
+	private ArrayList<Ship> ships = new ArrayList<>();
 	Swarm newSwarm;
 	Bomb newBomb;
 
-	public Galaga(String type) {
-		this.type = type;
-	}
-
-	public Galaga(String type, GalagaGUI galagaGUI) {
-		this.type = type;
-		this.galagaGUI = galagaGUI;
+	public Galaga() {
+		this.galagaGUI = new GalagaGUI(this);
+		newBoard = new Board();
+		newGame = new Game(newBoard, galagaGUI);
+		newSwarm = new Swarm(newBoard);
+		newBomb = new Bomb(newBoard, newSwarm);
 	}
 
 	@Override
 	public void run() {
-		try {
-			if(type.equals("server")) {
-				server = new GalagaServer(this);
-				server.start();
-			}
-			if(type.equals("client")) {
-				client = new GalagaClient(this, "192.168.0.27");
-				client.start();
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
 
+	}
+
+	public void init() {
 		// initialize all threads
-		newBoard = new Board();
-		newGame = new Game(newBoard, galagaGUI);
-		newLaser = new Laser(newBoard);
-		newShip = new Ship(newBoard, newLaser, galagaGUI);
-		newSwarm = new Swarm(newBoard);
-		newBomb = new Bomb(newBoard, newSwarm);
-
+		new Thread(newGame).start();
 		// get all threads to start();
-		newShip.start();
-		newSwarm.start();
-		newLaser.start();
-		newBomb.start();
-		newGame.start();
+		//newSwarm.start();
+		//newBomb.start();
 
 		try {
 			newGame.join();
@@ -65,17 +45,87 @@ public class Galaga extends Thread {
 		catch (InterruptedException err) {
 			err.printStackTrace();
 		}
+
 	}
 
-	public void moveShip(int keyCode) {
-		if(newShip != null)	newShip.moveShip(keyCode);
+	public void startClient() {
+		tcpClient = new TCPClient("192.168.0.27", new TCPClient.OnMessageReceived() {
+			@Override
+			public void messageReceived(String message) {
+				System.out.println(message);
+				received(message);
+			}
+		});
+		new Thread(tcpClient).start();
+	}
+
+	public void setID(int id) {
+		this.id = id;
+		this.symbol = (char) (id + '0');
+		System.out.println("id " + id);
+		System.out.println("symbol " + symbol);
+	}
+
+	public void addNewShip(String addNewShipMessage) {
+		String[] message = addNewShipMessage.split(" ");
+		int numberShips = Integer.parseInt(message[1]);
+		if(ships.size() == 0) {
+			for(int i = 0; i < numberShips; i++) {
+				char symbol = (char) (i + '0');
+				int newPos = Integer.parseInt(message[i + 2]);
+				ships.add(new Ship(symbol, newPos, 1, newBoard));
+				ships.get(i).start();
+			}
+		}
+		else {
+			for(int i = 0; i < numberShips; i++) {
+				int newPos = Integer.parseInt(message[i + 2]);
+				if(i != numberShips - 1) ships.get(i).moveTo(newPos);
+				else {
+					char symbol = (char) (id + '0');
+					ships.add(new Ship(symbol, newPos, 1, newBoard));
+					ships.get(i).start();
+				}
+			}
+		}
+	}
+
+	public void received(String message) {
+		int idx;
+		System.out.println("Server > " + message);
+		if(message != null && !message.equals("")) {
+			String[] splitted = message.split(" ");
+			String command = splitted[0];
+			switch (command) {
+				case "id":
+					int id = Integer.parseInt(splitted[1]);
+					setID(id);
+					break;
+				case "players":
+					addNewShip(message);
+					break;
+				case "start":
+					init();
+					break;
+				case "pos":
+					idx = Integer.parseInt(splitted[1]);
+					int pos = Integer.parseInt(splitted[2]);
+					System.out.println(message);
+					ships.get(idx).moveTo(pos);
+					break;
+				case "shoot":
+					idx = Integer.parseInt(splitted[1]);
+					ships.get(idx).shoot();
+					break;
+			}
+		}
 	}
 }
 
 class Board {
 
 	public int gameState, shipState, swarmState, shipFrontPos, swarmFrontPos;
-	public int height = 11, width = 43;
+	public int height = 11, width = 39;
 	public char[] line0 = { ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '};
 	public char[] line1 = { ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '};
 	public char[] line2 = { ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '};
@@ -109,29 +159,13 @@ class Board {
 	}
 
 	// Dibuja la pantalla del jeugo
-	/*public void draw() {
-
-		//Limpia la pantalla
-		final String ANSI_CLS = "\u001b[2J";
-		final String ANSI_HOME = "\u001b[H";
-		System.out.print(ANSI_CLS + ANSI_HOME);
-		System.out.flush();
-
+	/*
 		// Banner
 		System.out.println("+=====================+");
 		System.out.println("|=====================|");
 		System.out.println("|== G E R L E G E R ==|");
 		System.out.println("|=====================|");
 		System.out.println("+=====================+");
-
-		// Dibuja la pantalla de la batalla
-		for(char[] line : boardList) {
-			System.out.print("|");
-			for (int i = 0; i < width; i++) {
-				System.out.print("" + line[i]);
-			}
-			System.out.print("|\n");
-		}
 
 		// Instrucciones
 		System.out.println("+=====================+");
@@ -158,7 +192,7 @@ class Board {
 	}
 
 	//Cuenta el numero de enemigos
-	public synchronized int countSwarm(){
+	public int countSwarm(){
 		int count = 0;
 		for (char[] element : boardList) {
 			for (int i = 0; i < width; i++) {
@@ -184,14 +218,10 @@ class Game extends Thread {
 		try {
 			// Mientras el juego no haya acabado se va a imprimir la pantalla del juego cada 75 ms
 			while (!gameOver()) {
-				//board.draw();
 				if(galagaGUI != null)	galagaGUI.setBoardText(board.draw());
-				Thread.sleep(75);
+				Thread.sleep(80);
 			}
 
-			// Se vuelve a encender ECHO e ICANON al finalizar el juego
-			//String[] cmd = {"/bin/sh", "-c", "stty sane </dev/tty"};
-			//Runtime.getRuntime().exec(cmd);
 
 			// Dibuja la pantalla del juego
 			//board.draw();
@@ -219,36 +249,59 @@ class Game extends Thread {
 
 	//Verifica si es que ya existe un perdedor
 	private synchronized boolean gameOver(){
-		if (board.swarmState == 0 || board.shipState == 0)
+		return false;
+		/*if (board.swarmState == 0 || board.shipState == 0)
 			return true;
 		else
-			return false;
+			return false;*/
 	}
 
 }
 
 
 class Laser extends Thread {
-
+	private int laserColumnPos;
 	private Board board;
-	private boolean shoot = false;
 
-	Laser(Board board) {
+	Laser(Board board, int laserColumnPos) {
 		this.board = board;
+		this.laserColumnPos = laserColumnPos;
 	}
 
 	@Override
 	public void run() {
-		while(true) {
+		try{
+			int k = 100;
+			char[] currentLaserRow;
+			for (int i = board.height - 3; i >= 0; i--) {
+				//Obtiene la fila donde se encuentra el disparo
+				currentLaserRow = board.boardList.get(i);
+				// Si el disparo llega a un enemigo, lo destruye y termina su trayectoria
+				if (currentLaserRow[laserColumnPos] == '*'){
+					currentLaserRow[laserColumnPos] = ' ';
+					break;
+				}
+				//Dibuja el disparo antes del retardo
+				currentLaserRow[laserColumnPos] = '\'';
+				Thread.sleep(k);
+				//Borra el disparo luego del retardo
+				currentLaserRow[laserColumnPos] = ' ';
+			}
+		}
+		catch (InterruptedException err) {
+			err.printStackTrace();
+		}
+
+		/*while(true) {
 			// Si va a disparar, modifica el flag disparo a false y dispara
 			if(willShoot()) {
 				shoot = false;
 				pew();
 			}
-		}
+		}*/
 	}
 
-	// Modifica el flag disparo a True
+	/*// Modifica el flag disparo a True
 	public synchronized void blast() {
 		shoot = true;
 	}
@@ -282,42 +335,33 @@ class Laser extends Thread {
 		catch (InterruptedException err) {
 			err.printStackTrace();
 		}
-	}
+	}*/
 }
 
 
 class Ship extends Thread {
-	private GalagaGUI galagaGUI = null;
+	public char symbol;
+	public int xPos;
+	public int status;
 	private Board board;
-	private Laser laser;
 	private boolean run;
 
 	// Copia la referencia a Board y Laser, y dibuja la posicion inicial de la nave
-	Ship(Board board, Laser laser, GalagaGUI galagaGUI) {
+	Ship(char symbol, int xPos, int status, Board board) {
+		this.symbol = symbol;
+		this.xPos = xPos;
+		board.line9[xPos] = '^';
+		board.line10[xPos] = symbol;
+		this.status = status;
 		this.board = board;
-		this.laser = laser;
-		this.galagaGUI = galagaGUI;
-		board.shipFrontPos = board.width / 2;
-		board.line9[board.width / 2] = '^';
-		board.line10[board.width / 2] = '0';
+
 		run = true;
 	}
 
 	@Override
 	public void run() {
-
-		//try {
-			// Deshabilita ECHO e ICANON
-		    //String[] cmd0 = {"/bin/sh", "-c", "stty -echo </dev/tty"};
-		    //String[] cmd1 = {"/bin/sh", "-c", "stty -icanon time 0 min 0 </dev/tty"};
-		    //String[] cmd2 = {"/bin/sh", "-c", "stty sane </dev/tty"};
-			//Runtime.getRuntime().exec(cmd0);
-			//Runtime.getRuntime().exec(cmd1);
-
-
-
 			// Lee del teclado y mueve la nave de acuerdo a la entrada, hasta que el usuario presione Q
-			while(run) {
+			while(status == 1) {
 				/*if(galagaGUI != null && galagaGUI.keyCode != 0) {
 					System.out.println("Galaga game: " + galagaGUI.keyCode);
 					moveShip(galagaGUI.keyCode);
@@ -325,33 +369,21 @@ class Ship extends Thread {
 				galagaGUI.keyCode = 0;*/
 			}
 
-			/*while (keyPress != 'q' && keyPress != 'Q') {
-				keyPress = (char) System.in.read();
-				moveShip(keyPress);
-			}*/
-
-			// Finaliza el juego
-			//Runtime.getRuntime().exec(cmd2); // Enciende ECHO e ICANON de nuevo
 			System.out.println("+====  YOU  QUIT  ====+");
 			System.out.println("+=====================+\n");
 			System.exit(1);
-		//}
-		//catch (IOException err) {
-		//	err.printStackTrace();
-		//}
 	}
 
 	// Mueve la nave de acuerdo a la tecla presionada
-	public void moveShip(int keyCode) {
+	/*public void moveShip(int keyCode) {
+		System.out.println(keyCode);
 		switch(keyCode){
-			// Izquierda
 			case 65:
 				if (board.shipFrontPos > 0){
 					board.shipFrontPos--;
 					board.line9[board.shipFrontPos + 1] = ' ';
 					board.line10[board.shipFrontPos + 1] = ' ';
 				}
-				System.out.println("izquierda");
 				break;
 			// Derecha
 			case 68:
@@ -373,19 +405,33 @@ class Ship extends Thread {
 		// Si el estado de la nave es 1 la dibuja, sino dibuja un espacio en blanco
 		if (board.shipState != 0) {
 			board.line9[board.shipFrontPos] = '^';
-			board.line10[board.shipFrontPos] = '0';
+			board.line10[board.shipFrontPos] = id;
 		}
 		else {
 			board.line9[board.shipFrontPos] = ' ';
 			board.line10[board.shipFrontPos] = ' ';
 		}
+	}*/
+
+	public void moveTo(int xPos) {
+		board.line9[this.xPos] = ' ';
+		board.line10[this.xPos] = ' ';
+
+		this.xPos = xPos;
+
+		if (board.shipState != 0) {
+			board.line9[this.xPos] = '^';
+			board.line10[this.xPos] = symbol;
+		}
+		else {
+			board.line9[this.xPos] = ' ';
+			board.line10[this.xPos] = ' ';
+		}
 	}
 
-
-	public interface KeyPressReceived {
-		void keyPress();
+	public void shoot() {
+		new Thread(new Laser(board, xPos)).start();
 	}
-
 }
 
 

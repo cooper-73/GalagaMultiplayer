@@ -13,12 +13,8 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 
 public class GalagaGUI extends JFrame {
-    GalagaGUI thisGalagaGUI = this;
     Galaga galaga = null;
-    Galaga galagaClient = null;
-    Galaga galagaServer = null;
-    public boolean gameStarted = false;
-    public int keyCode;
+
     JPanel connectionPanel = new JPanel();
     JLabel ipAddressLabel = new JLabel("IP: ");
     JTextField ipAddresTextField = new JTextField();
@@ -34,7 +30,9 @@ public class GalagaGUI extends JFrame {
     JTextPane boardTextPane = new JTextPane();//720, 540
     JTextPane messageTextPane = new JTextPane();
 
-    public GalagaGUI() {
+    public GalagaGUI(Galaga galaga) {
+        this.galaga = galaga;
+        //Send the keyCode of the key pressed
         addKeyListener(new KeyListener() {
             @Override
             public void keyTyped(KeyEvent e) {
@@ -43,18 +41,16 @@ public class GalagaGUI extends JFrame {
 
             @Override
             public void keyPressed(KeyEvent e) {
-                keyCode = e.getKeyCode();
-                System.out.println(e.getKeyCode());
-                if(galagaClient != null) {
-                    galagaClient.client.sendData("0 " + e.getKeyCode());
-                }
+
             }
 
             @Override
             public void keyReleased(KeyEvent e) {
-
+                int keyCode = e.getKeyCode();
+                if (galaga.tcpClient != null) galaga.tcpClient.sendMessage("key " + galaga.id + " " + keyCode);
             }
         });
+
         setTitle("Galaga");
         setPreferredSize(new Dimension(800, 600));
         setSize(800, 600);
@@ -67,14 +63,13 @@ public class GalagaGUI extends JFrame {
         createServerButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                new Thread(new Galaga("server")).start();
-                try {
+                /*try {
+                    new Thread(new GalagaServer()).start();
                     Thread.sleep(50);
                 } catch (InterruptedException interruptedException) {
                     interruptedException.printStackTrace();
-                }
-                galagaClient = new Galaga("client", thisGalagaGUI);
-                galagaClient.start();
+                }*/
+                galaga.startClient();
                 waitRoomMaster();
             }
         });
@@ -82,8 +77,13 @@ public class GalagaGUI extends JFrame {
         joinGameButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                galagaClient = new Galaga("client", thisGalagaGUI);
-                galagaClient.start();
+                //Falta leer de los text field
+                galaga.startClient();
+                try {
+                    Thread.sleep(20);
+                } catch (InterruptedException interruptedException) {
+                    interruptedException.printStackTrace();
+                }
                 waitRoomSlave();
             }
         });
@@ -106,10 +106,10 @@ public class GalagaGUI extends JFrame {
         closeServerButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                galaga.tcpClient.stopClient();
                 homeRoom();
             }
         });
-
 
         startPanel.add(createServerButton);
         startPanel.add(joinGameButton);
@@ -220,9 +220,9 @@ public class GalagaGUI extends JFrame {
     }
 
     public void startGame() {
+        if(galaga.tcpClient != null)    galaga.tcpClient.sendMessage("start");
         setAllFocusable(false);
         this.requestFocus();
-        //new Thread(new Galaga("client", this)).start();
     }
 
     public void setAllFocusable(boolean flag) {
