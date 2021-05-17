@@ -9,6 +9,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class Galaga extends Thread {
 	public int id;
+	public int status = 1;
 	public char symbol;	//Id del palyer 1, 2, 3, ...
 	public GalagaGUI galagaGUI;
 	public TCPClient tcpClient;

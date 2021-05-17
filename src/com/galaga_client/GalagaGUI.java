@@ -48,14 +48,14 @@ public class GalagaGUI extends JFrame {
             @Override
             public void keyReleased(KeyEvent e) {
                 int keyCode = e.getKeyCode();
-                if (galaga.tcpClient != null) galaga.tcpClient.sendMessage("key " + galaga.id + " " + keyCode);
+                if (galaga != null && galaga.tcpClient != null && galaga.status == 1) galaga.tcpClient.sendMessage("key " + galaga.id + " " + keyCode);
             }
         });
 
         setTitle("Galaga");
-        setPreferredSize(new Dimension(800, 600));
-        setSize(800, 600);
-        setResizable(false);
+        setPreferredSize(new Dimension(800, 700));
+        setSize(800, 700);
+        //setResizable(false);
         setLayout(new BorderLayout(20, 20));
 
         setConnectionPanel();
@@ -84,7 +84,7 @@ public class GalagaGUI extends JFrame {
                 int PORT = Integer.parseInt(portTextField.getText());
                 try {
                     galaga.startClient(IP, PORT);
-                    Thread.sleep(20);
+                    Thread.sleep(20);//
                 } catch (InterruptedException interruptedException) {
                     interruptedException.printStackTrace();
                 }
@@ -102,7 +102,7 @@ public class GalagaGUI extends JFrame {
         exitGameButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                galaga.tcpClient.stopClient();
+                galaga.tcpClient.sendMessage("leave " + galaga.id);
                 setAllFocusable(true);
                 homeRoom();
             }
@@ -142,6 +142,7 @@ public class GalagaGUI extends JFrame {
     }
 
     public void setBoardPanel() {
+        boardPanel.removeAll();
         boardPanel.setLayout(new BoxLayout(boardPanel, BoxLayout.Y_AXIS));
         //Set Board Styles
         Font font = new Font(Font.MONOSPACED, Font.BOLD, 24);
@@ -172,11 +173,17 @@ public class GalagaGUI extends JFrame {
                 "\\$$$$$$  |                        \\$$$$$$  |          \n" +
                 " \\______/                          \\______/           \n");
 
+        messageTextPane.setText("================ Members ================\n" +
+                "|      Cerna Espiritu Roberto Alexis    |\n" +
+                "|        Cruz Coro Cristhian Elian      |\n" +
+                "|      Violeta Estrella Piero Alexis    |");
+
         boardTextPane.setEditable(false);
         messageTextPane.setEditable(false);
-
-        boardPanel.add(messageTextPane);
         boardPanel.add(boardTextPane);
+        boardPanel.add(messageTextPane);
+        boardPanel.repaint();
+        boardPanel.revalidate();
     }
 
     public void setBoardText(String text) {
@@ -199,6 +206,8 @@ public class GalagaGUI extends JFrame {
         startPanel.add(joinGameButton);
         startPanel.repaint();
         startPanel.revalidate();
+        boardPanel.removeAll();
+        setBoardPanel();
     }
 
     public void waitRoomMaster() {
@@ -209,6 +218,11 @@ public class GalagaGUI extends JFrame {
         startPanel.add(closeServerButton);
         startPanel.repaint();
         startPanel.revalidate();
+        boardPanel.removeAll();
+        boardPanel.add(messageTextPane);
+        boardPanel.add(boardTextPane);
+        boardPanel.repaint();
+        boardPanel.revalidate();
         setMessageText("|   A - move left   |  K - pew pew pew  |\n" +
                 "|   D - move right  |  Q - quit game    |\n" +
                 "============= Instructions ==============");
@@ -221,6 +235,11 @@ public class GalagaGUI extends JFrame {
         startPanel.add(exitGameButton);
         startPanel.repaint();
         startPanel.revalidate();
+        boardPanel.removeAll();
+        boardPanel.add(messageTextPane);
+        boardPanel.add(boardTextPane);
+        boardPanel.repaint();
+        boardPanel.revalidate();
         setMessageText("|   A - move left   |  K - pew pew pew  |\n" +
                 "|   D - move right  |  Q - quit game    |\n" +
                 "============= Instructions ==============");
