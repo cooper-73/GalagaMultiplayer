@@ -42,6 +42,7 @@ public class GalagaServer extends Thread {
         if(message != null && !message.equals("")) {
             String[] splitted = message.split(" ");
             String command = splitted[0];
+            int idx;
             switch (command) {
                 case "start":   //Iniciar el juego en todos los clientes
                     String newShipPositionsMessage = "players " + tcpServer.numberClients;
@@ -52,7 +53,7 @@ public class GalagaServer extends Thread {
                     sendStartGame();
                     break;
                 case "key": //Recibe el input de un usuario
-                    int idx = Integer.parseInt(splitted[1]);
+                    idx = Integer.parseInt(splitted[1]);
                     int keyCode = Integer.parseInt(splitted[2]);
                     switch (keyCode) {
                         case 65:
@@ -67,7 +68,10 @@ public class GalagaServer extends Thread {
                             tcpServer.clients[idx].stopClient();
                             break;
                     }
-
+                    break;
+                case "died":
+                    idx = Integer.parseInt(splitted[1]);
+                    sendStatus(idx);
                     break;
             }
         }
@@ -85,6 +89,11 @@ public class GalagaServer extends Thread {
 
     public void sendShooterPosition(int idx) {
         tcpServer.sendMessageTCPServer("shoot " + idx);
+    }
+
+    public void sendStatus(int idx) {
+        String message = "status " + idx + " " + 0;
+        tcpServer.sendMessageTCPServer(message);
     }
 
 }

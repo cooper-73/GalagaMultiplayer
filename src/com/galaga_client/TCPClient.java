@@ -56,6 +56,6 @@ public class TCPClient extends Thread {
     }
 
     public interface OnMessageReceived {
-        void messageReceived(String message);
+        void messageReceived(String message) throws InterruptedException;
     }
 }

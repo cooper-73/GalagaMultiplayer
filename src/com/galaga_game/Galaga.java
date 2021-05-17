@@ -7,10 +7,10 @@ import java.util.*;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
-public class Galaga extends Thread {
+public class Galaga {
 	public int id;
-	public int status = 1;
-	public char symbol;	//Id del palyer 1, 2, 3, ...
+	public int status = 0;
+	public char symbol;	//Id del player 1, 2, 3, ...
 	public GalagaGUI galagaGUI;
 	public TCPClient tcpClient;
 
@@ -25,21 +25,17 @@ public class Galaga extends Thread {
 		newBoard = new Board();
 		newGame = new Game(newBoard, galagaGUI);
 		newSwarm = new Swarm(newBoard);
-		newBomb = new Bomb(newBoard, newSwarm);
-	}
-
-	@Override
-	public void run() {
-
 	}
 
 	public void init() {
+		status = 1;
 		galagaGUI.setMessageText("");
 		// initialize all threads
 		newSwarm.start();
+		newBomb = new Bomb(newBoard, newSwarm, tcpClient, this);
 		newBomb.start();
 
-		for(Ship ship : ships)	new Thread(ship).start();
+		//for(Ship ship : ships)	new Thread(ship).start();
 
 		try {
 			newGame.join();
@@ -53,7 +49,7 @@ public class Galaga extends Thread {
 	public void startClient(String IP, int PORT) throws InterruptedException {
 		tcpClient = new TCPClient(IP, PORT, new TCPClient.OnMessageReceived() {
 			@Override
-			public void messageReceived(String message) {
+			public void messageReceived(String message) throws InterruptedException {
 				System.out.println(message);
 				received(message);
 			}
@@ -94,7 +90,7 @@ public class Galaga extends Thread {
 		}
 	}
 
-	public void received(String message) {
+	public void received(String message) throws InterruptedException {
 		int idx;
 		System.out.println("Server > " + message);
 		if(message != null && !message.equals("")) {
@@ -120,13 +116,17 @@ public class Galaga extends Thread {
 					idx = Integer.parseInt(splitted[1]);
 					ships.get(idx).shoot();
 					break;
+				case "status":
+					idx = Integer.parseInt(splitted[1]);
+					int status = Integer.parseInt(splitted[2]);
+					ships.get(idx).boom();
+					ships.get(idx).setStatus(status);
 			}
 		}
 	}
 }
 
 class Board {
-
 	public int gameState, shipState, swarmState, shipFrontPos, swarmFrontPos;
 	public int height = 11, width = 39;
 	public char[] line0 = { ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '};
@@ -245,7 +245,6 @@ class Game extends Thread {
 }
 
 
-
 class Ship extends Thread {
 	public char symbol;
 	public int xPos;
@@ -265,9 +264,36 @@ class Ship extends Thread {
 
 	@Override
 	public void run() {
-		/*while(status == 1) {
+		while(status == 1) {
+			try {
+				Thread.sleep(50);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+	}
 
-		}*/
+	public void boom() throws InterruptedException {
+		char[] ypos;
+		ypos = board.boardList.get(9); // Fila donde se encuentra la bomba
+		ypos[xPos] = 'o';
+		Thread.sleep(50);
+		if (xPos  - 1 >= 0) ypos[xPos  - 1] = 'o';
+		if (xPos  + 1 <= board.width) ypos[xPos  + 1] = 'o';
+		Thread.sleep(50);
+		ypos[xPos ] = ' ';
+		if (xPos  - 2 >= 0) ypos[xPos  - 2] = 'o';
+		if (xPos  + 2 <= board.width) ypos[xPos  + 2] = 'o';
+		Thread.sleep(50);
+		if (xPos -1 >= 0) ypos[xPos - 1] = ' ';
+		if (xPos + 1 <= board.width) ypos[xPos + 1] = ' ';
+		Thread.sleep(50);
+		if (xPos - 2 >= 0) ypos[xPos - 2] = ' ';
+		if (xPos + 2 <= board.width) ypos[xPos + 2] = ' ';
+		Thread.sleep(50);
+		board.line9[xPos] = ' ';
+		board.line10[xPos] = ' ';
+		this.status = 0;
 	}
 
 	public void moveTo(int xPos) {
@@ -276,7 +302,7 @@ class Ship extends Thread {
 
 		this.xPos = xPos;
 
-		if (board.shipState != 0) {
+		if (status != 0) {
 			board.line9[this.xPos] = '^';
 			board.line10[this.xPos] = symbol;
 		}
@@ -295,6 +321,10 @@ class Ship extends Thread {
 		//Rafaga de disparos
 		//new Thread(new Laser(xPos)).start();
 
+	}
+
+	public void setStatus(int status) {
+		this.status = status;
 	}
 
 	class Laser extends Thread {
@@ -438,10 +468,14 @@ class Swarm extends Thread {
 class Bomb extends Thread {
 	private Board board;
 	private Swarm swarm;
+	private TCPClient tcpClient;
+	private Galaga galaga;
 
-	Bomb(Board board, Swarm swarm) {
+	Bomb(Board board, Swarm swarm, TCPClient tcpClient, Galaga galaga) {
 		this.board = board;
 		this.swarm = swarm;
+		this.tcpClient = tcpClient;
+		this.galaga = galaga;
 	}
 
 	@Override
@@ -460,33 +494,23 @@ class Bomb extends Thread {
 		try {
 			int k = 300; //Velocidad del disparo entre filas
 			char[] ypos;
-			int xpos = ThreadLocalRandom.current().nextInt(swarm.xpos, swarm.xpos + 11); //Genera un lugar entre la nave para el disparo - cambiar el 11
+			int xPos = ThreadLocalRandom.current().nextInt(swarm.xpos, swarm.xpos + 11); //Genera un lugar entre la nave para el disparo - cambiar el 11
 			for (int i = 1; swarm.ypos + i < board.height; i++){
 				ypos = board.boardList.get(swarm.ypos + i); // Fila donde se encuentra la bomba
 				// Si la bomba alcanza al jugador, se hace un efecto de explosion
-				if (ypos[xpos] == '^') {
-					ypos[xpos] = 'o';
-					Thread.sleep(50);
-					if (xpos  - 1 >= 0) ypos[xpos  - 1] = 'o';
-					if (xpos  + 1 <= board.width) ypos[xpos  + 1] = 'o';
-					Thread.sleep(50);
-					ypos[xpos ] = ' ';
-					if (xpos  - 2 >= 0) ypos[xpos  - 2] = 'o';
-					if (xpos  + 2 <= board.width) ypos[xpos  + 2] = 'o';
-					Thread.sleep(50);
-					if (xpos -1 >= 0) ypos[xpos - 1] = ' ';
-					if (xpos + 1 <= board.width) ypos[xpos + 1] = ' ';
-					Thread.sleep(50);
-					if (xpos - 2 >= 0) ypos[xpos - 2] = ' ';
-					if (xpos + 2 <= board.width) ypos[xpos + 2] = ' ';
-					Thread.sleep(50);
-					board.shipState = 0;
+				if (ypos[xPos] != ' ') {
+					if(tcpClient != null) {
+						//tcpClient.sendMessage("died " + board.boardList.get(swarm.ypos + i + 1)[xPos]);
+						if(swarm.ypos + i == board.height - 2)	tcpClient.sendMessage("died " + board.boardList.get(swarm.ypos + i + 1)[xPos]);
+						if(swarm.ypos + i == board.height - 1)	tcpClient.sendMessage("died " + board.boardList.get(swarm.ypos + i)[xPos]);
+					}
+					galaga.status = 0;
 					break;
 				}
 				// Dibuja la bomba, y luego de un retardo la borra
-				ypos[xpos ] = '\"';
+				ypos[xPos ] = '\"';
 				Thread.sleep(k);
-				ypos[xpos ] = ' ';
+				ypos[xPos ] = ' ';
 			}
 		}
 		catch (InterruptedException err) {
