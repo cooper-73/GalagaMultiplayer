@@ -14,6 +14,9 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 
 public class GalagaGUI extends JFrame {
+    //String IP = "192.168.0.27";
+    //int PORT = 4444;
+
     public Galaga galaga = null;
 
     JPanel connectionPanel = new JPanel();
@@ -64,10 +67,8 @@ public class GalagaGUI extends JFrame {
         createServerButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                //String IP = ipAddresTextField.getText();
-                //int PORT = Integer.parseInt(portTextField.getText());
-                String IP = "192.168.0.27";
-                int PORT = 4444;
+                String IP = ipAddresTextField.getText();
+                int PORT = Integer.parseInt(portTextField.getText());
                 try {
                     new Thread(new GalagaServer(PORT)).start();
                     Thread.sleep(50);   //Delay entre crear el servidor y conectarse a el
@@ -82,10 +83,8 @@ public class GalagaGUI extends JFrame {
         joinGameButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                //String IP = ipAddresTextField.getText();
-                //int PORT = Integer.parseInt(portTextField.getText());
-                String IP = "192.168.0.27";
-                int PORT = 4444;
+                String IP = ipAddresTextField.getText();
+                int PORT = Integer.parseInt(portTextField.getText());
                 try {
                     galaga.startClient(IP, PORT);
                     Thread.sleep(20);//
